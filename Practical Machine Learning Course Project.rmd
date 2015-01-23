@@ -1,0 +1,57 @@
+---
+title: "Practical Machine Learning Project"
+output: html_document
+---
+
+Background:
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+Load Library:
+```{r}
+library(caret)
+library(randomForest)
+```
+
+Load Data:
+```{r}
+pml_train <- read.csv(file = 'pml-training.csv',na.strings = c('NA','#DIV/0!',''))
+pml_test <- read.csv(file = 'pml-testing.csv',na.strings = c('NA','#DIV/0!',''))
+```
+
+Data Processing:
+```{r}
+for(i in c(8:ncol(pml_train)-1)) {
+pml_train[,i] = as.numeric(as.character(pml_train[,i]))
+pml_test[,i] = as.numeric(as.character(pml_test[,i]))
+}
+index <- colnames(pml_train)
+index <- colnames(pml_train[colSums(is.na(pml_train)) == 0])
+index <- index[-c(1:7)]
+```
+
+Split Data to test set & Cross-Validation
+```{r}
+set.seed(123)
+index_train <- createDataPartition(y=pml_train$classe, p=0.80, list=FALSE)
+train<-pml_train[index_train,index]
+test<-pml_train[-index_train,index]
+dim(train)
+dim(test)
+```
+
+Candidate Model Training:
+```{r}
+model_rf <- train(classe ~ .,data = train,method = 'rf', trControl = trainControl(method = "cv",number = 4,allowParallel = TRUE, verboseIter = TRUE))
+predict_rf <- predict(model_rf,test)
+candidatemod_rf <- confusionMatrix(predict_rf,test$classe)
+candidatemod_rf 
+```
+
+Applying to Test Set:
+```{r}
+final <- length(colnames(pml_test[]))
+colnames(pml_test)[final] <- 'classe'
+test_rf <- predict(model_rf,pml_test[,index])
+test_rf
+```
